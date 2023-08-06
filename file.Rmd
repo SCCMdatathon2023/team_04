@@ -1,0 +1,161 @@
+---
+title: "Untitled"
+author: "Joseph Geibig"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+```{r}
+library(survival)
+library("survminer")
+library(readr)
+library(dplyr)
+library(ggplot2)
+
+
+ic = data.frame()
+
+data = read.csv("ic.csv")
+data$language <- ifelse(data$language == "ENGL", 1, 0)
+data$X = NULL
+df = data
+
+
+
+for (i in columns(data))
+data$lang_cat = as.numeric(factor(data$language, levels = levels(factor(data$language)), ordered = TRUE))
+
+model = glm(lang_cat~.-language, data = data)
+summary(model)
+```
+
+
+
+```{r}
+library(lubridate)
+
+
+
+# coxph(Surv(newin, newout) ~ age, data = data)
+```
+
+```{r}
+
+
+colnames(df)
+
+
+
+for (col in colnames(df)) {
+  first_value <- df[[col]][1]
+  
+  # Check if the first value is not numeric
+  if (!is.numeric(first_value)) {
+    df[[col]] <- as.numeric(factor(df[[col]], levels = unique(df[[col]]), ordered = TRUE))
+  }
+}
+# df.fillna(0)
+dff <- replace(df, is.na(df), 0)
+
+dff$newin = ymd_hms(data$intime)
+dff$newout = ymd_hms(data$outtime)
+
+data
+
+
+
+
+mod = lm(los~., data = dff)
+summary(mod)
+
+```
+```{r}
+# go through unique values
+# pull out subject id, los, age, gender, insurance, language
+
+new = data.frame()
+
+subjects = unique(data$subject_id)
+los = c()
+age = c()
+gender = c()
+insurance = c()
+language = c()
+sofa = c()
+
+for (sub in subjects) {
+  subject = filter(data, subject_id == sub)
+  los = c(los, subject$los[1])
+  age = c(age, subject$age[1])
+  gender = c(gender, subject$gender[1])
+  insurance = c(insurance, subject$insurance[1])
+  language = c(language, subject$language[1])
+  sofa = c(sofa, subject$SOFA[1])
+}
+
+
+
+
+```
+
+```{r}
+new = data.frame(los, gender, age, insurance, language, sofa)
+
+for (col in colnames(new)) {
+  first_value <- new[[col]][1]
+  
+  # Check if the first value is not numeric
+  if (!is.numeric(first_value)) {
+    new[[col]] <- as.numeric(factor(new[[col]], levels = unique(new[[col]]), ordered = TRUE))
+  }
+}
+
+new
+```
+
+```{r}
+library(ggsurvfit)
+library(gtsummary)
+model = survfit(Surv(los)~language, data = new)
+
+model %>%
+  ggsurvfit() +
+  add_confidence_interval() + 
+  add_risktable()
+
+```
+
+```{r}
+breaks = c(0,55,65,88,311)
+new$agecat <- cut(new$age, breaks = breaks, labels = c(1,2,3,4), right = FALSE )
+breaks = c(0,4,11,40)
+new$sofacat <- cut(new$sofa, breaks = breaks, labels = c(1,2,3), right = FALSE )
+coxph(Surv(los) ~ language + gender + agecat + factor(insurance) + sofacat, data = new)
+```
+
+
+```{r}
+hist(dff$age)
+```
+
+
+```{r}
+dff$insurance
+data$insurance
+```
+
+
+```{r}
+median(subset(new, language == 0)$los)
+
+median(subset(new, language == 1)$los)
+```
+
+
+```{r}
+x = new$language
+y = new$los
+wilcox.test(los ~ language, data = new)
+
+```
